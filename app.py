@@ -27,7 +27,7 @@ class MongoJSONEncoder(json.JSONEncoder):
 
 app.json_encoder = MongoJSONEncoder
 
-@app.route('/get_data', methods=['GET'])
+@app.route('/get_data', methods=['POST'])
 def get_data():
     try:
         # Get request data
