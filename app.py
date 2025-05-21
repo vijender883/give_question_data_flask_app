@@ -33,10 +33,10 @@ def get_data():
         # Get request data
         request_data = request.get_json()
         
-        if not request_data or 'question' not in request_data:
+        if not request_data or 'question_name' not in request_data:
             return jsonify({"error": "Missing 'question' parameter"}), 400
         
-        question = request_data['question']
+        question = request_data['question_name']
         
         # Get the database and collection
         db = get_database()
@@ -56,6 +56,104 @@ def get_data():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+@app.route('/add_new_question', methods=['POST'])
+def add_new_question():
+    try:
+        # Get request data
+        request_data = request.get_json()
+        
+        if not request_data or 'question_name' not in request_data:
+            return jsonify({"status": "failure", "message": "Missing 'question_name' parameter"}), 400
+        
+        # Get the database and collection
+        db = get_database()
+        collection = db['questionData']
+        
+        # Check if question already exists
+        existing_question = collection.find_one({"question_name": request_data['question_name']})
+        if existing_question:
+            return jsonify({"status": "failure", "message": "Question with this name already exists"}), 409
+        
+        # Insert the new question
+        result = collection.insert_one(request_data)
+        
+        if result.inserted_id:
+            return jsonify({"status": "success", "id": str(result.inserted_id)}), 201
+        else:
+            return jsonify({"status": "failure", "message": "Failed to insert question"}), 500
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "failure", "message": str(e)}), 500
+
+@app.route('/edit_question', methods=['POST'])
+def edit_question():
+    try:
+        # Get request data
+        request_data = request.get_json()
+        
+        if not request_data or 'question_name' not in request_data:
+            return jsonify({"status": "failure", "message": "Missing 'question_name' parameter"}), 400
+        
+        # Get the database and collection
+        db = get_database()
+        collection = db['questionData']
+        
+        # Check if question exists
+        existing_question = collection.find_one({"question_name": request_data['question_name']})
+        if not existing_question:
+            return jsonify({"status": "failure", "message": "Question not found"}), 404
+        
+        # Update the question
+        result = collection.update_one(
+            {"question_name": request_data['question_name']},
+            {"$set": request_data}
+        )
+        
+        if result.modified_count > 0:
+            return jsonify({"status": "success"}), 200
+        else:
+            return jsonify({"status": "failure", "message": "No changes were made"}), 200
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "failure", "message": str(e)}), 500
+
+@app.route('/delete_question', methods=['POST'])
+def delete_question():
+    try:
+        # Get request data
+        request_data = request.get_json()
+        
+        if not request_data or 'question_name' not in request_data:
+            return jsonify({"status": "failure", "message": "Missing 'question_name' parameter"}), 400
+        
+        question_name = request_data['question_name']
+        
+        # Get the database and collection
+        db = get_database()
+        collection = db['questionData']
+        
+        # Check if question exists before deletion
+        existing_question = collection.find_one({"question_name": question_name})
+        if not existing_question:
+            return jsonify({"status": "failure", "message": "Question not found"}), 404
+        
+        # Delete the question
+        result = collection.delete_one({"question_name": question_name})
+        
+        if result.deleted_count > 0:
+            return jsonify({"status": "success"}), 200
+        else:
+            return jsonify({"status": "failure", "message": "Failed to delete question"}), 500
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "failure", "message": str(e)}), 500
 
 def process_document(document):
     """Process MongoDB document to handle ObjectId and add image placeholders"""
